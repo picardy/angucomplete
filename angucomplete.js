@@ -6,6 +6,7 @@
 
 angular.module('angucomplete', [] )
     .directive('angucomplete', function ($parse, $http, $sce, $timeout) {
+
     return {
         restrict: 'EA',
         scope: {
@@ -46,8 +47,31 @@ angular.module('angucomplete', [] )
                 $scope.pause = $scope.userPause;
             }
 
-            isNewSearchNeeded = function(newTerm, oldTerm) {
+            var isNewSearchNeeded = function(newTerm, oldTerm) {
                 return newTerm.length >= $scope.minLength && newTerm != oldTerm
+            }
+
+            /** 
+             * given a key string such as "firstName" or "meta.subkey", return the value
+             * at the key for object obj.
+             * @param {Object} obj: the object context to use
+             * @param {String} key: the key to use. can include dots ("meta.")
+             * @return {Mixed} value: the value at key, or undefined if the key does not exist
+             */
+            var getValue = function(obj, key) {
+                var keyArr = key.split("."),
+                    currentObj = obj;
+
+                // iterate through the split key
+                angular.forEach(keyArr, function(currentKey) {
+                    if (!!obj && currentKey in currentObj) {
+                        currentObj = currentObj[currentKey];
+                    } else {
+                        currentObj = undefined;
+                    }
+                });
+
+                return currentObj;
             }
 
             $scope.processResults = function(responseData, str) {
@@ -64,12 +88,12 @@ angular.module('angucomplete', [] )
                         var titleCode = [];
 
                         for (var t = 0; t < titleFields.length; t++) {
-                            titleCode.push(responseData[i][titleFields[t]]);
+                            titleCode.push(getValue(responseData[i], titleFields[t]));
                         }
 
                         var description = "";
                         if ($scope.descriptionField) {
-                            description = responseData[i][$scope.descriptionField];
+                            description = getValue(responseData[i], $scope.descriptionField);
                         }
 
                         var imageUri = "";
@@ -79,7 +103,7 @@ angular.module('angucomplete', [] )
 
                         var image = "";
                         if ($scope.imageField) {
-                            image = imageUri + responseData[i][$scope.imageField];
+                            image = imageUri + getValue(responseData[i], $scope.imageField);
                         }
 
                         var text = titleCode.join(' ');
@@ -118,7 +142,7 @@ angular.module('angucomplete', [] )
                             var match = false;
 
                             for (var s = 0; s < searchFields.length; s++) {
-                                match = match || (typeof $scope.localData[i][searchFields[s]] === 'string' && typeof str === 'string' && $scope.localData[i][searchFields[s]].toLowerCase().indexOf(str.toLowerCase()) >= 0);
+                                match = match || (typeof getValue($scope.localData[i], searchFields[s]) === 'string' && typeof str === 'string' && getValue($scope.localData[i], searchFields[s]).toLowerCase().indexOf(str.toLowerCase()) >= 0);
                             }
 
                             if (match) {
@@ -133,7 +157,7 @@ angular.module('angucomplete', [] )
                         $http.get($scope.url + str, {}).
                             success(function(responseData, status, headers, config) {
                                 $scope.searching = false;
-                                $scope.processResults((($scope.dataField) ? responseData[$scope.dataField] : responseData ), str);
+                                $scope.processResults((($scope.dataField) ? getValue(responseData, $scope.dataField) : responseData ), str);
                             }).
                             error(function(data, status, headers, config) {
                                 console.log("error");
