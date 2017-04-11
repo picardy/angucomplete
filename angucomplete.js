@@ -5,7 +5,7 @@
  */
 
 angular.module('angucomplete', [] )
-    .directive('angucomplete', ['$parse', '$http', '$sce', '$timeout', function ($parse, $http, $sce, $timeout) {
+    .directive('angucomplete', ['$parse', '$http', '$q', '$sce', '$timeout', function ($parse, $http, $q, $sce, $timeout) {
 
     return {
         restrict: 'EA',
@@ -52,7 +52,7 @@ angular.module('angucomplete', [] )
                 return newTerm.length >= $scope.minLength && newTerm != oldTerm
             }
 
-            /** 
+            /**
              * given a key string such as "firstName" or "meta.subkey", return the value
              * at the key for object obj.
              * @param {Object} obj: the object context to use
@@ -155,12 +155,12 @@ angular.module('angucomplete', [] )
                         $scope.processResults(matches, str);
 
                     } else {
-                        $http.get($scope.url + str, {}).
-                            success(function(responseData, status, headers, config) {
+                        $q.when($http.get($scope.url + str, {}))
+                            .then(function(responseBody, status, headers, config) {
                                 $scope.searching = false;
-                                $scope.processResults((($scope.dataField) ? getValue(responseData, $scope.dataField) : responseData ), str);
-                            }).
-                            error(function(data, status, headers, config) {
+                                $scope.processResults((($scope.dataField) ? getValue(responseBody.data, $scope.dataField) : responseBody.data ), str);
+                            })
+                            .catch(function(data, status, headers, config) {
                                 console.log("error");
                             });
                     }
@@ -272,4 +272,3 @@ angular.module('angucomplete', [] )
         }
     };
 }]);
-
